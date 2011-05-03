@@ -8,10 +8,16 @@
 
 (function($, undefined) {
 
+
 var barca = {
 
+    // Here is barca default settings
     settings : {
+        // This text will be displayed in title when loading
         loading : 'loading...',
+        // This function will called before first ajax request
+        // It should be to store original page
+        // Returns a function-object that will be called when the history state being activated
         original : function() {
             var origin = $('body').html()
             return {
@@ -20,24 +26,35 @@ var barca = {
               }
             }
         },
-        hashchange : function( new_hash ) { },
+        // Fake hashchange event, for handling with the hash in request url
+        // Called after ajax request completed
+        // You may want that smooth scrolling to an anchor, like this:
+        //   function( hash ) {
+        //       $('html, body').stop(true).animate( { scrollTop : $( '#' + hash ).offset().top }, 1000 )
+        //   }
+        hashchange : function( hash ) { },
+        // Whether to use Hashbang mode, set true or keep the default
         useHash : function() {
             if ( !window.history || !window.history.pushState ) return true
             else return false
         },
+        // Useful in Hashbang mode, the prefix of url in your site
         baseurl : function() {
             return window.location.protocol + '//' + window.location.host + '/'
         }
     },
 
+    // Stores the history state objects
     stack : [],
-
+    // Current history state id
     state : 1,
 
     inited : false,
 
+    // Stores the hashes
     hashStack : [],
 
+    //Called when the history state being activated
     popStack : function ( state_id ) {
         barca.state = state_id
         var state = barca.stack[state_id]
@@ -79,20 +96,20 @@ $.extend({
 
     barcaSetup : function ( target, settings ) {
 
-		if ( !settings ) {
-			settings = target
-			target = $.extend( true, barca.settings, settings )
-		} else {
-			$.extend( true, target, barca.settings, settings )
-		}
+        if ( !settings ) {
+            settings = target
+            target = $.extend( true, barca.settings, settings )
+        } else {
+            $.extend( true, target, barca.settings, settings )
+        }
 
-		for( var field in { context: 1, url: 1 } ) {
-			if ( field in settings ) {
-				target[ field ] = settings[ field ]
-			} else if( field in barca.settings ) {
-				target[ field ] = barca.settings[ field ]
-			}
-		}
+        for( var field in { context: 1, url: 1 } ) {
+            if ( field in settings ) {
+                target[ field ] = settings[ field ]
+            } else if( field in barca.settings ) {
+                target[ field ] = barca.settings[ field ]
+            }
+        }
 
         target.href = getValueOrCall( target.url )
         var href = target.href.split('#')
@@ -102,8 +119,8 @@ $.extend({
         target.useHash = getValueOrCall( target.useHash )
         target.baseurl = getValueOrCall( target.baseurl )
 
-		return target
-	},
+        return target
+    },
 
 
     barca : function( url, options ) {
