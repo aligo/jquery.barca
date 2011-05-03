@@ -20,14 +20,33 @@ var barca = {
               }
             }
         },
-        hashchange : function( new_hash, old_hash ) { }
+        hashchange : function( new_hash, old_hash ) { },
+        useHash : function() {
+            if ( !window.history || !window.history.pushState ) return true
+            else return false
+        },
+        baseurl : function() {
+            return window.location.protocol + '//' + window.location.host + '/'
+        }
     },
 
-    stack : {},
+    stack : [],
 
     state : 1,
 
     inited : false,
+
+    hashStack : [],
+
+    popStack : function ( state_id ) {
+        barca.state = state_id
+        var state = barca.stack[state_id]
+        if ( state && state.callback ) {
+            state.callback()
+            return true
+        }
+        return false
+    }
 
 }
 
@@ -59,6 +78,9 @@ $.extend({
         target.url = href[0]
         target.hash = href[1] || undefined
 
+        target.useHash = getValueOrCall( target.useHash )
+        target.baseurl = getValueOrCall( target.baseurl )
+
 		return target
 	},
 
@@ -80,7 +102,7 @@ $.extend({
         var success = s.success
         s.success = function(data, status, xhr){
             var args = arguments
-            var state_id = window.history.state
+            var state_id = barca.state
 
             barca.stack[state_id] = {
                 callback : function() {
@@ -90,7 +112,7 @@ $.extend({
             }
             barca.stack[state_id].callback()
 
-            window.history.replaceState(state_id, document.title, window.location.href)
+            if ( !s.useHash ) window.history.replaceState(state_id, document.title, window.location.href)
 
             if (window._gaq) _gaq.push(['_trackPageview'])
         }
@@ -98,10 +120,25 @@ $.extend({
         if ( !barca.inited ) {
             barca.inited = true
             barca.stack[1] = s.original()
-            window.history.replaceState(1, document.title, window.location.href)
+            if ( !s.useHash ) {
+                window.history.replaceState(1, document.title, window.location.href)
+            } else {
+                barca.hashStack[barca.state] = window.location.hash
+            }
         }
         barca.state ++
-        window.history.pushState(barca.state, s.loading, s.href)
+        if ( !s.useHash ) {
+            window.history.pushState(barca.state, s.loading, s.href)
+        } else {
+            if ( 0 === s.url.indexOf(s.baseurl) ) {
+                var hashstate = '!' + s.url.substring( s.baseurl.length )
+                if (undefined !== s.hash) hashstate = s.hash + hashstate
+                hashstate = '#' + hashstate
+                barca.hashStack[barca.state] = hashstate
+                barca.hashStack.length = barca.state + 1
+                window.location.hash = hashstate
+            }
+        }
         document.title = s.loading
 
         var xhr = barca.xhr
@@ -120,14 +157,26 @@ if ( $.event.props.indexOf('state') < 0 ) $.event.props.push('state')
 $(window).bind('popstate', function( event ) {
     var state_id = event.state
     if ( state_id ) {
-        barca.state = state_id
-        var state = barca.stack[state_id]
-        if ( state && state.callback ) {
-            state.callback()
-            succ = true
+        barca.popStack(state_id)
+    }
+})
+
+
+$(window).bind('hashchange', function() {
+    if ( barca.hashStack[barca.state] !== window.location.hash ) {
+        var indices = []
+        var idx = barca.hashStack.indexOf(window.location.hash)
+        while (idx != -1) {
+            indices.push(idx)
+            idx = barca.hashStack.indexOf(window.location.hash, idx + 1)
+        }
+        if ( 0 !== indices.length) {
+            indices.sort(function( a, b ) {
+                return Math.abs(a - barca.state) - Math.abs(b - barca.state)
+            })
+            barca.popStack(indices[0])
         }
     }
-    if ( !succ ) window.location = event.href
 })
 
 })(jQuery);
