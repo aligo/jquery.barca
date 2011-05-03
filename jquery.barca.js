@@ -20,7 +20,7 @@ var barca = {
               }
             }
         },
-        hashchange : function( new_hash, old_hash ) { },
+        hashchange : function( new_hash ) { },
         useHash : function() {
             if ( !window.history || !window.history.pushState ) return true
             else return false
@@ -52,6 +52,27 @@ var barca = {
 
 var getValueOrCall = function ( target ) {
     return ( $.isFunction(target) ) ? target() : target
+}
+
+var inArray = function( elem, array, start ) {
+    var start = start || 0
+    if ( array.indexOf ) {
+        return array.indexOf( elem, start )
+    }
+    for ( var i = start, length = array.length; i < length; i++ ) {
+        if ( array[ i ] === elem ) return i
+    }
+    return -1
+}
+
+var allInArray = function( elem, array ) {
+    var indices = []
+    var idx = inArray( elem, array )
+    while ( idx !== -1 ) {
+        indices.push( idx )
+        idx = inArray( elem, array, idx+1 )
+    }
+    return indices
 }
 
 $.extend({
@@ -97,8 +118,6 @@ $.extend({
 
         var s = jQuery.barcaSetup( {}, options )
 
-        var old_hash = window.location.hash
-
         var success = s.success
         s.success = function(data, status, xhr){
             var args = arguments
@@ -106,40 +125,41 @@ $.extend({
 
             barca.stack[state_id] = {
                 callback : function() {
-                    success.apply(this, args)
-                    s.hashchange(s.hash, old_hash)
+                    success.apply( this, args )
+                    s.hashchange( s.hash )
                 }
             }
             barca.stack[state_id].callback()
 
-            if ( !s.useHash ) window.history.replaceState(state_id, document.title, window.location.href)
+            if ( !s.useHash ) window.history.replaceState( state_id, document.title, window.location.href )
 
-            if (window._gaq) _gaq.push(['_trackPageview'])
+            if (window._gaq) _gaq.push( ['_trackPageview', s.href] )
         }
 
         if ( !barca.inited ) {
             barca.inited = true
             barca.stack[1] = s.original()
             if ( !s.useHash ) {
-                window.history.replaceState(1, document.title, window.location.href)
+                window.history.replaceState( 1, document.title, window.location.href )
             } else {
                 barca.hashStack[barca.state] = window.location.hash
             }
         }
         barca.state ++
         if ( !s.useHash ) {
-            window.history.pushState(barca.state, s.loading, s.href)
+            window.history.pushState( barca.state, s.loading, s.href )
         } else {
-            if ( 0 === s.url.indexOf(s.baseurl) ) {
-                var hashstate = '!' + s.url.substring( s.baseurl.length )
-                if (undefined !== s.hash) hashstate = s.hash + hashstate
-                hashstate = '#' + hashstate
+            if ( 0 === inArray( s.baseurl, s.url ) ) {
+                var hashstate = s.url.substring( s.baseurl.length )
+                if ( '/' !== hashstate.substring( 0, 1 ) ) hashstate = '/' + hashstate
+                hashstate = '#!' + hashstate
+                if ( undefined !== s.hash ) hashstate = hashstate + '#' + s.hash
                 barca.hashStack[barca.state] = hashstate
                 barca.hashStack.length = barca.state + 1
                 window.location.hash = hashstate
             }
         }
-        document.title = s.loading
+        window.document.title = s.loading
 
         var xhr = barca.xhr
         if ( xhr && xhr.readyState < 4) {
@@ -151,30 +171,26 @@ $.extend({
     }
 })
 
-
-if ( $.event.props.indexOf('state') < 0 ) $.event.props.push('state')
+if ( -1 === inArray( 'state', $.event.props ) ) $.event.props.push('state')
 
 $(window).bind('popstate', function( event ) {
     var state_id = event.state
     if ( state_id ) {
-        barca.popStack(state_id)
+        barca.popStack( state_id )
     }
 })
 
 
 $(window).bind('hashchange', function() {
     if ( barca.hashStack[barca.state] !== window.location.hash ) {
-        var indices = []
-        var idx = barca.hashStack.indexOf(window.location.hash)
-        while (idx != -1) {
-            indices.push(idx)
-            idx = barca.hashStack.indexOf(window.location.hash, idx + 1)
-        }
-        if ( 0 !== indices.length) {
+
+        var indices = allInArray( window.location.hash, barca.hashStack )
+
+        if ( 0 !== indices.length ) {
             indices.sort(function( a, b ) {
-                return Math.abs(a - barca.state) - Math.abs(b - barca.state)
+                return Math.abs( a - barca.state ) - Math.abs( b - barca.state )
             })
-            barca.popStack(indices[0])
+            barca.popStack( indices[0] )
         }
     }
 })
