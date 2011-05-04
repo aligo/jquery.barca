@@ -1,0 +1,16 @@
+h1. JQuery Barca
+
+Barca aims to be the successor of JQuery Ajax, for people who already using ajax, and want to easily add back & forward functions.
+
+h3. Features
+
+ * Same API as JQuery Ajax
+ * Use HTML5 History API as much as possible
+ * Hashbang-style url for old browsers
+ * Still can handle with the id/name anchor of url
+ * The XHR results will be cached for back & forward
+
+
+
+Copyright 2011, "aligo Kang":http://aligo.me/
+Dual licensed under the MIT or GPL Version 2 licenses.

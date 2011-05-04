@@ -6,46 +6,53 @@
  * Dual licensed under the MIT or GPL Version 2 licenses.
  */
 
-(function($, undefined) {
+(function ( $, undefined ) {
 
 
 var barca = {
 
     // Here is barca default settings
     settings : {
+
         // This text will be displayed in title when loading
+        // Set false if you wan't
         loading : 'loading...',
+
         // This function will called before first ajax request
         // It should be to store original page
         // Returns a function-object that will be called when the history state being activated
-        original : function() {
+        original : function () {
             var origin = $('body').html()
             return {
-              callback : function() {
+              callback : function () {
                   $('body').html(origin)
               }
             }
         },
+
         // Fake hashchange event, for handling with the hash in request url
         // Called after ajax request completed
         // You may want that smooth scrolling to an anchor, like this:
         //   function( hash ) {
         //       $('html, body').stop(true).animate( { scrollTop : $( '#' + hash ).offset().top }, 1000 )
         //   }
-        hashchange : function( hash ) { },
+        hashchange : function ( hash ) { },
+
         // Whether to use Hashbang mode, set true or keep the default
-        useHash : function() {
+        useHash : function () {
             if ( !window.history || !window.history.pushState ) return true
             else return false
         },
+
         // Useful in Hashbang mode, the prefix of url in your site
-        baseurl : function() {
+        baseurl : function () {
             return window.location.protocol + '//' + window.location.host + '/'
         }
     },
 
     // Stores the history state objects
     stack : [],
+
     // Current history state id
     state : 1,
 
@@ -54,7 +61,7 @@ var barca = {
     // Stores the hashes
     hashStack : [],
 
-    //Called when the history state being activated
+    // Called when the history state being activated
     popStack : function ( state_id ) {
         barca.state = state_id
         var state = barca.stack[state_id]
@@ -67,29 +74,32 @@ var barca = {
 
 }
 
-var getValueOrCall = function ( target ) {
-    return ( $.isFunction(target) ) ? target() : target
-}
+// Utilities
+var u = {
+    getValueOrCall : function ( target ) {
+        return ( $.isFunction(target) ) ? target() : target
+    },
 
-var inArray = function( elem, array, start ) {
-    var start = start || 0
-    if ( array.indexOf ) {
-        return array.indexOf( elem, start )
-    }
-    for ( var i = start, length = array.length; i < length; i++ ) {
-        if ( array[ i ] === elem ) return i
-    }
-    return -1
-}
+    inArray : function ( elem, array, start ) {
+        var start = start || 0
+        if ( array.indexOf ) {
+            return array.indexOf( elem, start )
+        }
+        for ( var i = start, length = array.length; i < length; i++ ) {
+            if ( array[ i ] === elem ) return i
+        }
+        return -1
+    },
 
-var allInArray = function( elem, array ) {
-    var indices = []
-    var idx = inArray( elem, array )
-    while ( idx !== -1 ) {
-        indices.push( idx )
-        idx = inArray( elem, array, idx+1 )
+    allInArray : function ( elem, array ) {
+        var indices = []
+        var idx = u.inArray( elem, array )
+        while ( idx !== -1 ) {
+            indices.push( idx )
+            idx = u.inArray( elem, array, idx+1 )
+        }
+        return indices
     }
-    return indices
 }
 
 $.extend({
@@ -111,19 +121,20 @@ $.extend({
             }
         }
 
-        target.href = getValueOrCall( target.url )
+        target.href = u.getValueOrCall( target.url )
         var href = target.href.split('#')
         target.url = href[0]
         target.hash = href[1] || undefined
 
-        target.useHash = getValueOrCall( target.useHash )
-        target.baseurl = getValueOrCall( target.baseurl )
+        target.useHash = u.getValueOrCall( target.useHash )
+        target.baseurl = u.getValueOrCall( target.baseurl )
+
+        target.loading = target.loading || window.document.title
 
         return target
     },
 
-
-    barca : function( url, options ) {
+    barca : function ( url, options ) {
 
         if ( typeof url === "object" ) {
             options = url
@@ -136,28 +147,28 @@ $.extend({
         var s = jQuery.barcaSetup( {}, options )
 
         var success = s.success
-        s.success = function(data, status, xhr){
+        s.success = function ( data, status, xhr ){
             var args = arguments
             var state_id = barca.state
 
             barca.stack[state_id] = {
-                callback : function() {
+                callback : function () {
                     success.apply( this, args )
                     s.hashchange( s.hash )
                 }
             }
             barca.stack[state_id].callback()
 
-            if ( !s.useHash ) window.history.replaceState( state_id, document.title, window.location.href )
+            if ( !s.useHash ) window.history.replaceState( state_id, window.document.title, window.location.href )
 
-            if (window._gaq) _gaq.push( ['_trackPageview', s.href] )
+            if ( window._gaq ) _gaq.push( ['_trackPageview', s.href] )
         }
 
         if ( !barca.inited ) {
             barca.inited = true
             barca.stack[1] = s.original()
             if ( !s.useHash ) {
-                window.history.replaceState( 1, document.title, window.location.href )
+                window.history.replaceState( 1, window.document.title, window.location.href )
             } else {
                 barca.hashStack[barca.state] = window.location.hash
             }
@@ -166,13 +177,14 @@ $.extend({
         if ( !s.useHash ) {
             window.history.pushState( barca.state, s.loading, s.href )
         } else {
-            if ( 0 === inArray( s.baseurl, s.url ) ) {
+            if ( 0 === u.inArray( s.baseurl, s.url ) ) {
                 var hashstate = s.url.substring( s.baseurl.length )
                 if ( '/' !== hashstate.substring( 0, 1 ) ) hashstate = '/' + hashstate
                 hashstate = '#!' + hashstate
                 if ( undefined !== s.hash ) hashstate = hashstate + '#' + s.hash
                 barca.hashStack[barca.state] = hashstate
                 barca.hashStack.length = barca.state + 1
+
                 window.location.hash = hashstate
             }
         }
@@ -188,9 +200,9 @@ $.extend({
     }
 })
 
-if ( -1 === inArray( 'state', $.event.props ) ) $.event.props.push('state')
+if ( -1 === u.inArray( 'state', $.event.props ) ) $.event.props.push('state')
 
-$(window).bind('popstate', function( event ) {
+$(window).bind('popstate', function ( event ) {
     var state_id = event.state
     if ( state_id ) {
         barca.popStack( state_id )
@@ -198,13 +210,13 @@ $(window).bind('popstate', function( event ) {
 })
 
 
-$(window).bind('hashchange', function() {
+$(window).bind('hashchange', function () {
     if ( barca.hashStack[barca.state] !== window.location.hash ) {
 
-        var indices = allInArray( window.location.hash, barca.hashStack )
+        var indices = u.allInArray( window.location.hash, barca.hashStack )
 
         if ( 0 !== indices.length ) {
-            indices.sort(function( a, b ) {
+            indices.sort(function ( a, b ) {
                 return Math.abs( a - barca.state ) - Math.abs( b - barca.state )
             })
             barca.popStack( indices[0] )
