@@ -99,6 +99,15 @@ var u = {
             idx = u.inArray( elem, array, idx+1 )
         }
         return indices
+    },
+
+    // Get the pathname & query strings & hashes of a href
+    getPath : function ( href ) {
+        var dummy = document.createElement('a')
+        dummy.href = href
+        if ( '/' === dummy.pathname || '' === dummy.pathname ) return '/'
+        var idx = href.indexOf( dummy.pathname )
+        return href.substring( idx )
     }
 }
 
@@ -161,7 +170,7 @@ $.extend({
 
             if ( !s.useHash ) window.history.replaceState( state_id, window.document.title, window.location.href )
 
-            if ( window._gaq ) _gaq.push( ['_trackPageview', s.href] )
+            if ( window._gaq ) _gaq.push( [ '_trackPageview', u.getPath( s.href ) ] )
         }
 
         if ( !barca.inited ) {
