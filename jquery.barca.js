@@ -23,8 +23,10 @@ var barca = {
         // Returns a function-object that will be called when the history state being activated
         original : function () {
             var origin = $('body').html()
+            var title = window.document.title
             return {
               callback : function () {
+                  window.document.title = title
                   $('body').html(origin)
               }
             }
@@ -47,7 +49,11 @@ var barca = {
         // Useful in Hashbang mode, the prefix of url in your site
         baseurl : function () {
             return window.location.protocol + '//' + window.location.host + '/'
-        }
+        },
+
+        // Don't send a ajax request but push state
+        // Notice: success callback would be called with any xhr results
+        dontRequest : false
     },
 
     // Stores the history state objects
@@ -204,8 +210,11 @@ $.extend({
             xhr.onreadystatechange = $.noop
             xhr.abort()
         }
-
-        barca.xhr = $.ajax(s)
+        if ( !s.dontRequest ) {
+            barca.xhr = $.ajax(s)
+        } else {
+            s.success()
+        }
     }
 })
 
