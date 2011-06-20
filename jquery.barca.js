@@ -168,6 +168,7 @@ $.extend({
 
             barca.stack[state_id] = {
                 callback : function () {
+                    if ( s.beforeBarca ) s.beforeBarca()
                     success.apply( this, args )
                     s.hashchange( s.hash )
                 }
@@ -210,6 +211,9 @@ $.extend({
             xhr.onreadystatechange = $.noop
             xhr.abort()
         }
+
+        if ( s.beforeBarca ) s.beforeBarca()
+
         if ( !s.dontRequest ) {
             barca.xhr = $.ajax(s)
         } else {
